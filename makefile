@@ -11,13 +11,13 @@ CC  = gcc
 CFLAGS += -noixemul -Wall
 #-DMEMTRACK
 LDFLAGS += -noixemul  -O3
-LIBS =   -ldebug
+LIBS =   -ldebug -lcjson
 
-OBJS	=  obj/logo.o  obj/xmlviewerlist.o obj/xmlviewerexpat.o obj/xmlviewertree.o obj/xmlviewerabout.o obj/$(EXE).o
+OBJS    =  obj/logo.o  obj/xmlviewerlist.o obj/xmlviewerexpat.o obj/xmlviewerjson.o obj/xmlviewertree.o obj/xmlviewerabout.o obj/$(EXE).o
 
-all:	$(EXE)
+all:    $(EXE)
 
-clean: 
+clean:
 	-rm -rf $(OBJS) $(EXE)
 locales:
 	$(FLEXCAT) catalogs/xmlviewer.cd  catalogs/polski/xmlviewer.ct catalog catalogs/polski/xmlviewer.catalog
@@ -37,9 +37,11 @@ obj/xmlviewerlist.o: xmlviewerlist.c  xmlviewerlist.h
 obj/xmlviewerexpat.o: xmlviewerexpat.c  xmlviewerexpat.h
 	$(CC) -c  $(CFLAGS) -o $@ $<
 
+obj/xmlviewerjson.o: xmlviewerjson.c  xmlviewerjson.h
+	$(CC) -c  $(CFLAGS) -o $@ $<
+
 obj/xmlviewertree.o: xmlviewertree.c xmlviewertree.h
 	$(CC) -c  $(CFLAGS) -o $@ $<
 
 obj/xmlviewerabout.o: xmlviewerabout.c xmlviewerabout.h
 	$(CC) -c  $(CFLAGS) -o $@ $<
-

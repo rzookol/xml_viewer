@@ -28,6 +28,7 @@
 
 #include "xmlviewerlist.h"
 #include "xmlviewerexpat.h"
+#include "xmlviewerjson.h"
 #include "xmlviewertree.h"
 #include "xmlviewerabout.h"
 #include "xmlviewerlocale.h"
@@ -124,6 +125,101 @@ void handle_arguments( int argc, char *argv[] )
     {
         printf( "Syntax: %s %s\n", argv[0], TEMPLATE );
     }
+}
+
+/// helper to detect JSON files
+static BOOL is_json_file( const char *filename )
+{
+    const char *ext;
+
+    if( !filename )
+    {
+        return FALSE;
+    }
+
+    if( ( ext = strrchr( filename, '.' ) ) )
+    {
+        if( Stricmp( ext, ".json" ) == 0 )
+            return TRUE;
+    }
+
+    return FALSE;
+}
+
+static BOOL load_json_tree( Object *obj, BPTR fileXML, struct XMLTree *tree, char *error_buf, size_t error_buf_len )
+{
+    LONG file_size;
+    char *json_buf = NULL;
+    BOOL success = FALSE;
+
+    if( ( file_size = Seek( fileXML, 0, OFFSET_END ) ) > 0 )
+    {
+        if( Seek( fileXML, 0, OFFSET_BEGINNING ) != -1 )
+        {
+            if( ( json_buf = ( char* )AllocVec( file_size + 1, MEMF_ANY ) ) )
+            {
+                if( Read( fileXML, json_buf, file_size ) == file_size )
+                {
+                    json_buf[file_size] = '\0';
+
+                    if( JsonToTree( tree, tree->filename, json_buf ) )
+                    {
+                        success = TRUE;
+                    }
+                    else
+                    {
+                        snprintf( error_buf, error_buf_len, "%s", "Error parsing JSON file" );
+                        MUI_RequestA( obj, window, 0, "XML Viewer Error", "*OK", error_buf, NULL );
+                    }
+                }
+                else
+                {
+                    snprintf( error_buf, error_buf_len, "%s", "Unable to read JSON file" );
+                    MUI_RequestA( obj, window, 0, "XML Viewer Error", "*OK", error_buf, NULL );
+                }
+                FreeVec( json_buf );
+            }
+        }
+    }
+    else
+    {
+        snprintf( error_buf, error_buf_len, "%s", "JSON file is empty" );
+        MUI_RequestA( obj, window, 0, "XML Viewer Error", "*OK", error_buf, NULL );
+    }
+
+    return success;
+}
+
+static BOOL load_xml_tree( Object *obj, BPTR fileXML, struct XMLTree *tree, XML_Parser parser, char *error_buf, size_t error_buf_len )
+{
+    char buf[BUFSIZ];
+    int done;
+    BOOL success = TRUE;
+
+    XML_ParserReset( parser, 0 );
+    XML_SetUserData( parser, tree );
+    XML_SetElementHandler( parser, startElement, endElement );
+    XML_SetCharacterDataHandler( parser,  default_hndl );
+    XML_SetXmlDeclHandler( parser, decl_hndl );
+    XML_SetCommentHandler( parser, comment_hndl );
+
+    do
+    {
+        size_t len =  Read( fileXML, buf, BUFSIZ ); //fread(buf, 1, sizeof(buf), fileXML);
+        done = len < BUFSIZ;
+        if( XML_Parse( parser, buf, len, done ) == XML_STATUS_ERROR )
+        {
+            snprintf( error_buf, error_buf_len,  "Error:\n\n%s at line %d",
+                      XML_ErrorString( XML_GetErrorCode( parser ) ), XML_GetCurrentLineNumber( parser ) );
+            MUI_RequestA( obj, window, 0, "XML Viewer Error", "*OK", error_buf, NULL );
+            success = FALSE;
+            break;
+        }
+
+    }
+    while( !done );
+
+    return success;
 }
 
 /// CreateAppClass()
@@ -512,48 +608,42 @@ ULONG MyApp_Load( struct IClass *cl, Object *obj,  struct MUIP_App_Filename *msg
     struct MyApp_Data   *data = INST_DATA( cl, obj );
     char error_buf[100];
     BPTR fileXML;
-    char buf[BUFSIZ];
-    int done;
+    BOOL is_json = FALSE;
 
     if( msg->filename )
     {
+        is_json = is_json_file( ( const char* )msg->filename );
+
         if( fileXML  = Open( ( STRPTR )msg->filename, MODE_OLDFILE ) )
         {
+            BOOL loaded = FALSE;
+
             DoMethod( list,  MUIM_Set, MUIA_List_Quiet, TRUE );
             DoMethod( lt_nodes,  MUIM_Set, MUIA_Listtree_Quiet, TRUE );
             DoMethod( lt_nodes, MUIM_Listtree_Remove, MUIV_Listtree_Remove_ListNode_Root, MUIV_Listtree_Remove_TreeNode_All, 0 );
 
-            XML_ParserReset( parser, 0 );
             m_tree.tree = lt_nodes;
             m_tree.depth = 0;
-            XML_SetUserData( parser, &m_tree );
-            XML_SetElementHandler( parser, startElement, endElement );
-            XML_SetCharacterDataHandler( parser,  default_hndl );
-            XML_SetXmlDeclHandler( parser, decl_hndl );
-            XML_SetCommentHandler( parser, comment_hndl );
-
-            // if a previous search was active, reset to the start of the new file
-            data->last_search = -1;
+            data->last_search = -1; // reset any active search
 
             strcpy( m_tree.filename, FilePart( msg->filename ) );
 
-            do
+            if( is_json )
             {
-                size_t len =  Read( fileXML, buf, BUFSIZ ); //fread(buf, 1, sizeof(buf), fileXML);
-                done = len < BUFSIZ;
-                if( XML_Parse( parser, buf, len, done ) == XML_STATUS_ERROR )
-                {
-                    snprintf( error_buf, 100,  "Error:\n\n%s at line %d",
-                              XML_ErrorString( XML_GetErrorCode( parser ) ), XML_GetCurrentLineNumber( parser ) );
-                    MUI_RequestA( obj, window, 0, "XML Viewer Error", "*OK", error_buf, NULL );
-                    break;
-                }
-
+                loaded = load_json_tree( obj, fileXML, &m_tree, error_buf, sizeof( error_buf ) );
             }
-            while( !done );
+            else
+            {
+                loaded = load_xml_tree( obj, fileXML, &m_tree, parser, error_buf, sizeof( error_buf ) );
+            }
 
             DoMethod( lt_nodes, MUIM_Set,  MUIA_Listtree_Quiet, FALSE );
             DoMethod( list,  MUIM_Set,  MUIA_List_Quiet, FALSE );
+
+            if( !loaded )
+            {
+                DoMethod( lt_nodes, MUIM_Listtree_Remove, MUIV_Listtree_Remove_ListNode_Root, MUIV_Listtree_Remove_TreeNode_All, 0 );
+            }
 
             Close( fileXML );
         }
