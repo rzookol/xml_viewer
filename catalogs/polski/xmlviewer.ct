@@ -11,15 +11,15 @@ Niepoprawna wersja \"expat.library\"!\n
 ;Wrong version of \"expat.library\"!\n
 ;
 MSG_CUSTCLASSFAIL
-Nie mo¿na utworzyæ klasy.\n
+Nie moÂ¿na utworzyÃ¦ klasy.\n
 ;Failed to create custom class.\n
 ;
 MSG_APPFAIL
-Nie mo¿na utworzyæ aplikacji.\n
+Nie moÂ¿na utworzyÃ¦ aplikacji.\n
 ;Failed to create Application.\n
 ;
 MSG_EXPATFAIL
-;Nie mogê otworzyæ \"expat.library\" >= 4.0\n
+;Nie mogÃª otworzyÃ¦ \"expat.library\" >= 4.0\n
 ;Unable to open \"expat.library\" >= 4.0\n
 ;
 MSG_ASLSELECTFILE
@@ -27,7 +27,7 @@ Wybierz plik XML:
 ;Select XML File
 ;
 MSG_OPENALL
-Otwórz wszystko
+OtwÃ³rz wszystko
 ;Open All
 ;
 MSG_CLOSEALL
@@ -43,7 +43,7 @@ Wczytaj...
 ;Open...
 ;
 MSG_MENU_QUIT
-Skoñcz
+SkoÃ±cz
 ;Quit
 ;
 MSG_MENU_SAVE
@@ -51,7 +51,7 @@ Zapisz...
 ;Save...
 ;
 MSG_MENU_SAVEFORM
-Zapisz z wciêciami...
+Zapisz z wciÃªciami...
 ;Save formatted...
 ;
 MSG_MENU_PROJECT
@@ -63,15 +63,15 @@ Szukaj
 ;Search
 ;
 MSG_SEARCH_VALUES
-Warto¶ci elementów
+WartoÂ¶ci elementÃ³w
 ;Element values
 ;
 MSG_SEARCH_NAMES
-Nazwy elementów
+Nazwy elementÃ³w
 ;Element names
 ;
 MSG_SEARCH_ATTRIBS
-Atrybuty (nazwy i warto¶ci)
+Atrybuty (nazwy i wartoÂ¶ci)
 ;Attributes (name & values)
 ;
 MSG_SEARCH_PREV_HELP
@@ -83,11 +83,11 @@ Poprzedni
 ;Prev
 ;
 MSG_SEARCH_NEXT_HELP
-Wyszukaj nastêpny element.
+Wyszukaj nastÃªpny element.
 ;Search next element.
 ;
 MSG_SEARCH_NEXT 
-Nastêpny
+NastÃªpny
 ;Next
 ;
 MSG_LIST_ATTR 
@@ -95,7 +95,7 @@ Atrybut
 ;Atribute
 ;
 MSG_LIST_VAL
-Warto¶æ
+WartoÂ¶Ã¦
 ;Value
 ;
 MSG_MENU_CUT 
@@ -119,6 +119,54 @@ Strona domowa:
 ;Project homepage:
 ;
 MSG_UNABLETOOPENFILE 
-Nie mogê otworzyæ
+MSG_JSON_PARSE_ERROR
+Blad parsowania pliku JSON
+;Error parsing JSON file
+;
+MSG_JSON_READ_ERROR
+Blad odczytu pliku JSON
+;Error reading JSON file
+;
+MSG_JSON_ALLOC_ERROR
+Brak pamieci na bufor JSON
+;Unable to allocate buffer for JSON file
+;
+MSG_JSON_REWIND_ERROR
+Nie mozna przewinac pliku JSON
+;Unable to rewind JSON file
+;
+MSG_JSON_EMPTY_ERROR
+Plik JSON jest pusty
+;JSON file is empty
+;
+MSG_YAML_PARSE_ERROR
+Blad parsowania pliku YAML
+;Error parsing YAML file
+;
+MSG_YAML_READ_ERROR
+Blad odczytu pliku YAML
+;Error reading YAML file
+;
+MSG_YAML_ALLOC_ERROR
+Brak pamieci na bufor YAML
+;Unable to allocate buffer for YAML file
+;
+MSG_YAML_REWIND_ERROR
+Nie mozna przewinac pliku YAML
+;Unable to rewind YAML file
+;
+MSG_YAML_EMPTY_ERROR
+Plik YAML jest pusty
+;YAML file is empty
+;
+MSG_FORMAT_UNKNOWN
+Nie rozpoznano formatu pliku
+;Unable to detect file format
+;
+MSG_IFF_PARSE_ERROR
+Blad parsowania pliku IFF
+;Error parsing IFF file
+;
+Nie mogÃª otworzyÃ¦
 ;Error opening
 ;

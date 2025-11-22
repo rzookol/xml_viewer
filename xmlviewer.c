@@ -30,6 +30,10 @@
 #include "xmlviewerlist.h"
 #include "xmlviewerexpat.h"
 #include "xmlviewerjson.h"
+#include "xmlvieweryaml.h"
+#include "xmlvieweriff.h"
+#include "xmlviewerformat.h"
+#include "xmlviewerdata.h"
 #include "xmlviewertree.h"
 #include "xmlviewerabout.h"
 #include "xmlviewerlocale.h"
@@ -112,6 +116,8 @@ struct MUIP_App_FileReq
 #define TEMPLATE "FILE/A"
 BOOL load_xml_tree( Object *obj, BPTR fileXML, struct XMLTree *tree, XML_Parser parser, char *error_buf, size_t error_buf_len );
 BOOL load_json_tree( Object *obj, BPTR fileXML, struct XMLTree *tree, char *error_buf, size_t error_buf_len );
+BOOL load_yaml_tree( Object *obj, BPTR fileXML, struct XMLTree *tree, char *error_buf, size_t error_buf_len );
+BOOL load_iff_tree( Object *obj, BPTR fileXML, struct XMLTree *tree, char *error_buf, size_t error_buf_len );
 
 void handle_arguments( int argc, char *argv[] )
 {
@@ -129,26 +135,6 @@ void handle_arguments( int argc, char *argv[] )
         printf( "Syntax: %s %s\n", argv[0], TEMPLATE );
     }
 }
-
-/// helper to detect JSON files
-static BOOL is_json_file( const char *filename )
-{
-    const char *ext;
-
-    if( !filename )
-    {
-        return FALSE;
-    }
-
-    if( ( ext = strrchr( filename, '.' ) ) )
-    {
-        if( Stricmp( ext, ".json" ) == 0 )
-            return TRUE;
-    }
-
-    return FALSE;
-}
-
 
 /// CreateAppClass()
 
@@ -536,35 +522,57 @@ ULONG MyApp_Load( struct IClass *cl, Object *obj,  struct MUIP_App_Filename *msg
     struct MyApp_Data   *data = INST_DATA( cl, obj );
     char error_buf[100];
     BPTR fileXML;
-    BOOL is_json = FALSE;
+    struct FileFormatInfo format_info;
+    BOOL success = FALSE;
 
     if( msg->filename )
     {
-        is_json = is_json_file( ( const char* )msg->filename );
-
         if( fileXML  = Open( ( STRPTR )msg->filename, MODE_OLDFILE ) )
         {
+            if( !DetectFileFormat( ( const char* )msg->filename, fileXML, &format_info ) )
+            {
+                snprintf( error_buf,  100, "%s", GetCatalogStr( Cat, MSG_FORMAT_UNKNOWN, "Unable to detect file format" ) );
+                MUI_RequestA( obj, window, 0, "XML Viewer Error", "*OK", error_buf, NULL );
+                Close( fileXML );
+                return TRUE;
+            }
+
             DoMethod( list,  MUIM_Set, MUIA_List_Quiet, TRUE );
             DoMethod( lt_nodes,  MUIM_Set, MUIA_Listtree_Quiet, TRUE );
             DoMethod( lt_nodes, MUIM_Listtree_Remove, MUIV_Listtree_Remove_ListNode_Root, MUIV_Listtree_Remove_TreeNode_All, 0 );
 
             m_tree.tree = lt_nodes;
             m_tree.depth = 0;
+            m_tree.has_utf8_bom = format_info.has_utf8_bom;
+            memset( m_tree.tn, 0, sizeof( m_tree.tn ) );
             data->last_search = -1; // reset any active search
 
             strcpy( m_tree.filename, FilePart( msg->filename ) );
 
-            if( is_json )
+            switch( format_info.format )
             {
-                load_json_tree( obj, fileXML, &m_tree, error_buf, sizeof( error_buf ) );
-            }
-            else
-            {
-                load_xml_tree( obj, fileXML, &m_tree, parser, error_buf, sizeof( error_buf ) );
+                case FILE_FORMAT_JSON:
+                    success = load_json_tree( obj, fileXML, &m_tree, error_buf, sizeof( error_buf ) );
+                    break;
+                case FILE_FORMAT_YAML:
+                    success = load_yaml_tree( obj, fileXML, &m_tree, error_buf, sizeof( error_buf ) );
+                    break;
+                case FILE_FORMAT_IFF:
+                    success = load_iff_tree( obj, fileXML, &m_tree, error_buf, sizeof( error_buf ) );
+                    break;
+                case FILE_FORMAT_XML:
+                default:
+                    success = load_xml_tree( obj, fileXML, &m_tree, parser, error_buf, sizeof( error_buf ) );
+                    break;
             }
 
             DoMethod( lt_nodes, MUIM_Set,  MUIA_Listtree_Quiet, FALSE );
             DoMethod( list,  MUIM_Set,  MUIA_List_Quiet, FALSE );
+
+            if( success )
+            {
+                DoMethod( lt_nodes, MUIM_Listtree_Open, MUIV_Listtree_Open_ListNode_Root, MUIV_Listtree_Open_TreeNode_All, 0 );
+            }
 
             Close( fileXML );
         }
@@ -934,6 +942,7 @@ BOOL load_json_tree( Object *obj, BPTR fileXML, struct XMLTree *tree, char *erro
     LONG file_size;
     char *json_buf = NULL;
     BOOL success = FALSE;
+    LONG start_offset = tree && tree->has_utf8_bom ? 3 : 0;
 
     if( ( file_size = Seek( fileXML, 0, OFFSET_END ) ) > 0 )
     {
@@ -945,19 +954,127 @@ BOOL load_json_tree( Object *obj, BPTR fileXML, struct XMLTree *tree, char *erro
                 {
                     json_buf[file_size] = '\0';
 
-                    if( JsonToTree( tree, tree->filename, json_buf ) )
+                    if( file_size >= start_offset )
                     {
-                        success = TRUE;
+                        if( JsonToTree( tree, tree->filename, json_buf + start_offset ) )
+                        {
+                            success = TRUE;
+                        }
+                        else
+                        {
+                            snprintf( error_buf, error_buf_len, "%s", GetCatalogStr( Cat, MSG_JSON_PARSE_ERROR, "Error parsing JSON file" ) );
+                        }
                     }
                     else
                     {
-                        snprintf( error_buf, error_buf_len, "%s", "Error parsing JSON file" );
-                        MUI_RequestA( obj, window, 0, "XML Viewer Error", "*OK", error_buf, NULL );
+                        snprintf( error_buf, error_buf_len, "%s", GetCatalogStr( Cat, MSG_JSON_EMPTY_ERROR, "JSON file is empty" ) );
                     }
                 }
+                else
+                {
+                    snprintf( error_buf, error_buf_len, "%s", GetCatalogStr( Cat, MSG_JSON_READ_ERROR, "Error reading JSON file" ) );
+                }
+
                 FreeVec( json_buf );
             }
+            else
+            {
+                snprintf( error_buf, error_buf_len, "%s", GetCatalogStr( Cat, MSG_JSON_ALLOC_ERROR, "Unable to allocate buffer for JSON file" ) );
+            }
         }
+        else
+        {
+            snprintf( error_buf, error_buf_len, "%s", GetCatalogStr( Cat, MSG_JSON_REWIND_ERROR, "Unable to rewind JSON file" ) );
+        }
+    }
+    else
+    {
+        snprintf( error_buf, error_buf_len, "%s", GetCatalogStr( Cat, MSG_JSON_EMPTY_ERROR, "JSON file is empty" ) );
+    }
+
+    if( !success )
+    {
+        MUI_RequestA( obj, window, 0, "XML Viewer Error", "*OK", error_buf, NULL );
+    }
+
+    return success;
+}
+
+BOOL load_yaml_tree( Object *obj, BPTR fileXML, struct XMLTree *tree, char *error_buf, size_t error_buf_len )
+{
+    LONG file_size;
+    char *yaml_buf = NULL;
+    BOOL success = FALSE;
+    LONG start_offset = tree && tree->has_utf8_bom ? 3 : 0;
+
+    if( ( file_size = Seek( fileXML, 0, OFFSET_END ) ) > 0 )
+    {
+        if( Seek( fileXML, 0, OFFSET_BEGINNING ) != -1 )
+        {
+            if( ( yaml_buf = ( char* )AllocVec( file_size + 1, MEMF_ANY ) ) )
+            {
+                if( Read( fileXML, yaml_buf, file_size ) == file_size )
+                {
+                    yaml_buf[file_size] = '\0';
+
+                    if( file_size >= start_offset )
+                    {
+                        if( YamlToTree( tree, tree->filename, yaml_buf + start_offset ) )
+                        {
+                            success = TRUE;
+                        }
+                        else
+                        {
+                            snprintf( error_buf, error_buf_len, "%s", GetCatalogStr( Cat, MSG_YAML_PARSE_ERROR, "Error parsing YAML file" ) );
+                        }
+                    }
+                    else
+                    {
+                        snprintf( error_buf, error_buf_len, "%s", GetCatalogStr( Cat, MSG_YAML_EMPTY_ERROR, "YAML file is empty" ) );
+                    }
+                }
+                else
+                {
+                    snprintf( error_buf, error_buf_len, "%s", GetCatalogStr( Cat, MSG_YAML_READ_ERROR, "Error reading YAML file" ) );
+                }
+
+                FreeVec( yaml_buf );
+            }
+            else
+            {
+                snprintf( error_buf, error_buf_len, "%s", GetCatalogStr( Cat, MSG_YAML_ALLOC_ERROR, "Unable to allocate buffer for YAML file" ) );
+            }
+        }
+        else
+        {
+            snprintf( error_buf, error_buf_len, "%s", GetCatalogStr( Cat, MSG_YAML_REWIND_ERROR, "Unable to rewind YAML file" ) );
+        }
+    }
+    else
+    {
+        snprintf( error_buf, error_buf_len, "%s", GetCatalogStr( Cat, MSG_YAML_EMPTY_ERROR, "YAML file is empty" ) );
+    }
+
+    if( !success )
+    {
+        MUI_RequestA( obj, window, 0, "XML Viewer Error", "*OK", error_buf, NULL );
+    }
+
+    return success;
+}
+
+BOOL load_iff_tree( Object *obj, BPTR fileXML, struct XMLTree *tree, char *error_buf, size_t error_buf_len )
+{
+    BOOL success = FALSE;
+
+    if( IffToTree( tree, tree->filename, fileXML ) )
+    {
+        success = TRUE;
+    }
+    else
+    {
+        snprintf( error_buf, error_buf_len, "%s", GetCatalogStr( Cat, MSG_IFF_PARSE_ERROR, "Error parsing IFF file" ) );
+        MUI_RequestA( obj, window, 0, "XML Viewer Error", "*OK", error_buf, NULL );
     }
 
     return success;

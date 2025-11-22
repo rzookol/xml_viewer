@@ -11,9 +11,9 @@ CC  = gcc
 CFLAGS += -noixemul -Wall
 #-DMEMTRACK
 LDFLAGS += -noixemul  -O3
-LIBS =   -ldebug 
+LIBS =   -ldebug -lyaml -liffparse
 
-OBJS    =  obj/logo.o  obj/xmlviewerlist.o obj/xmlviewerexpat.o obj/xmlviewerjson.o obj/xmlviewertree.o obj/xmlviewerabout.o obj/cjson.o obj/$(EXE).o
+OBJS    =  obj/logo.o  obj/xmlviewerlist.o obj/xmlviewerexpat.o obj/xmlviewerjson.o obj/xmlvieweryaml.o obj/xmlvieweriff.o obj/xmlviewerformat.o obj/xmlviewerdata.o obj/xmlviewertree.o obj/xmlviewerabout.o obj/cjson.o obj/$(EXE).o
 
 all:    $(EXE)
 
@@ -35,10 +35,22 @@ obj/xmlviewerlist.o: xmlviewerlist.c  xmlviewerlist.h
 	$(CC) -c  $(CFLAGS) -o $@ $<
 
 obj/xmlviewerexpat.o: xmlviewerexpat.c  xmlviewerexpat.h
-	$(CC) -c  $(CFLAGS) -o $@ $<
+        $(CC) -c  $(CFLAGS) -o $@ $<
 
 obj/xmlviewerjson.o: xmlviewerjson.c  xmlviewerjson.h
-	$(CC) -c  $(CFLAGS) -o $@ $<
+        $(CC) -c  $(CFLAGS) -o $@ $<
+
+obj/xmlvieweryaml.o: xmlvieweryaml.c xmlvieweryaml.h
+        $(CC) -c  $(CFLAGS) -o $@ $<
+
+obj/xmlvieweriff.o: xmlvieweriff.c xmlvieweriff.h
+        $(CC) -c  $(CFLAGS) -o $@ $<
+
+obj/xmlviewerformat.o: xmlviewerformat.c xmlviewerformat.h
+        $(CC) -c  $(CFLAGS) -o $@ $<
+
+obj/xmlviewerdata.o: xmlviewerdata.c xmlviewerdata.h
+        $(CC) -c  $(CFLAGS) -o $@ $<
 
 obj/xmlviewertree.o: xmlviewertree.c xmlviewertree.h
 	$(CC) -c  $(CFLAGS) -o $@ $<

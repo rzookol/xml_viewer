@@ -24,6 +24,7 @@ struct XMLTree
     char filename[102];                         // 102 DOS limitation
     struct MUIS_Listtree_TreeNode *tn[512];     // consider increasing if more objects appear
     int depth;
+    BOOL has_utf8_bom;
 };
 
 

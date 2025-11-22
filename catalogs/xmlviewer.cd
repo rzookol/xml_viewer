@@ -88,3 +88,39 @@ Project homapage:
 MSG_UNABLETOOPENFILE (//)
 Error opening
 ;
+MSG_JSON_PARSE_ERROR (//)
+Error parsing JSON file
+;
+MSG_JSON_READ_ERROR (//)
+Error reading JSON file
+;
+MSG_JSON_ALLOC_ERROR (//)
+Unable to allocate buffer for JSON file
+;
+MSG_JSON_REWIND_ERROR (//)
+Unable to rewind JSON file
+;
+MSG_JSON_EMPTY_ERROR (//)
+JSON file is empty
+;
+MSG_YAML_PARSE_ERROR (//)
+Error parsing YAML file
+;
+MSG_YAML_READ_ERROR (//)
+Error reading YAML file
+;
+MSG_YAML_ALLOC_ERROR (//)
+Unable to allocate buffer for YAML file
+;
+MSG_YAML_REWIND_ERROR (//)
+Unable to rewind YAML file
+;
+MSG_YAML_EMPTY_ERROR (//)
+YAML file is empty
+;
+MSG_FORMAT_UNKNOWN (//)
+Unable to detect file format
+;
+MSG_IFF_PARSE_ERROR (//)
+Error parsing IFF file
+;
