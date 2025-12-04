@@ -2,7 +2,7 @@
 
 TODO
 
-- show known IFF structures
+- show known IFF structures (done)
 
 - utf8 support
 
